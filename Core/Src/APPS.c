@@ -17,6 +17,7 @@
 
 
 APPS_Data_Struct APPS_Data;
+Torque_Map_Struct Torque_Map_Data = { { {} }, { {} }, &Torque_Map_Data.map1 };
 
 //Buffer from DMA
 volatile uint16_t ADC1_buff[ADC1_BUFF_LEN];
@@ -105,16 +106,13 @@ void startAPPSTask() {
 
 		txMsg.header.DLC = 4;
 		txMsg.header.StdId = 0x69U;
-
-		txMsg.header.ExtId = 0;
-		txMsg.header.IDE = 0;
+		txMsg.header.IDE = CAN_ID_STD;
 		txMsg.header.RTR = CAN_RTR_DATA;
-		txMsg.header.TransmitGlobalTime = DISABLE;
 
-		myprintf("APPS1:%d, APPS_POS:%d\n\r", apps1Avg, appsPos);
+		DEBUG_PRINT("APPS1:%d, APPS_POS:%d\r\n", apps1Avg, appsPos);
 
 
-		osMessageQueuePut(CAN1_QHandle, &txMsg, 0, 5);
+		osMessageQueuePut(CAN2_QHandle, &txMsg, 0, 5);
 
 
 		tick+= APPS_PERIOD;

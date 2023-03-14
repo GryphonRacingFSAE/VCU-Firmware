@@ -34,7 +34,7 @@ int _write(int file, char *data, int len) {
 extern osSemaphoreId_t printSemHandle;
 
 // Custom printf for transmitting over UART3 (STLink connects it over USB to STMCube)
-int myprintf(const char *format, ...) {
+int GRCprintf(const char *format, ...) {
 	// Block printf from executing concurrently
 	osSemaphoreAcquire(printSemHandle, osWaitForever);
 

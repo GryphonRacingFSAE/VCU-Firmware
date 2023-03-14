@@ -108,6 +108,13 @@ const osThreadAttr_t ControlTask_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
+/* Definitions for CAN2TxTask */
+osThreadId_t CAN2TxTaskHandle;
+const osThreadAttr_t CAN2TxTask_attributes = {
+  .name = "CAN2TxTask",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityHigh1,
+};
 /* Definitions for CAN1_Q */
 osMessageQueueId_t CAN1_QHandle;
 uint8_t CAN1_QBuffer[ 16 * sizeof( CANMsg ) ];
@@ -118,6 +125,28 @@ const osMessageQueueAttr_t CAN1_Q_attributes = {
   .cb_size = sizeof(CAN1_QControlBlock),
   .mq_mem = &CAN1_QBuffer,
   .mq_size = sizeof(CAN1_QBuffer)
+};
+/* Definitions for CAN2_Q */
+osMessageQueueId_t CAN2_QHandle;
+uint8_t CAN2_QBuffer[ 16 * sizeof( CANMsg ) ];
+osStaticMessageQDef_t CAN2_QControlBlock;
+const osMessageQueueAttr_t CAN2_Q_attributes = {
+  .name = "CAN2_Q",
+  .cb_mem = &CAN2_QControlBlock,
+  .cb_size = sizeof(CAN2_QControlBlock),
+  .mq_mem = &CAN2_QBuffer,
+  .mq_size = sizeof(CAN2_QBuffer)
+};
+/* Definitions for CANRX_Q */
+osMessageQueueId_t CANRX_QHandle;
+uint8_t CANRX_QBuffer[ 32 * sizeof( CANMsg ) ];
+osStaticMessageQDef_t CANRX_QControlBlock;
+const osMessageQueueAttr_t CANRX_Q_attributes = {
+  .name = "CANRX_Q",
+  .cb_mem = &CANRX_QControlBlock,
+  .cb_size = sizeof(CANRX_QControlBlock),
+  .mq_mem = &CANRX_QBuffer,
+  .mq_size = sizeof(CANRX_QBuffer)
 };
 /* Definitions for Ctrl_Data_Mtx */
 osMutexId_t Ctrl_Data_MtxHandle;
@@ -134,6 +163,14 @@ const osMutexAttr_t APPS_Data_Mtx_attributes = {
   .name = "APPS_Data_Mtx",
   .cb_mem = &APPS_Data_MtxControlBlock,
   .cb_size = sizeof(APPS_Data_MtxControlBlock),
+};
+/* Definitions for Torque_Map_Mtx */
+osMutexId_t Torque_Map_MtxHandle;
+osStaticMutexDef_t Torque_Map_MtxControlBlock;
+const osMutexAttr_t Torque_Map_Mtx_attributes = {
+  .name = "Torque_Map_Mtx",
+  .cb_mem = &Torque_Map_MtxControlBlock,
+  .cb_size = sizeof(Torque_Map_MtxControlBlock),
 };
 /* Definitions for printSem */
 osSemaphoreId_t printSemHandle;
@@ -172,6 +209,7 @@ extern void startCAN1TxTask(void *argument);
 extern void startAPPSTask(void *argument);
 extern void startCANRxTask(void *argument);
 extern void startControlTask(void *argument);
+extern void startCAN2TxTask(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -241,6 +279,9 @@ int main(void)
   /* creation of APPS_Data_Mtx */
   APPS_Data_MtxHandle = osMutexNew(&APPS_Data_Mtx_attributes);
 
+  /* creation of Torque_Map_Mtx */
+  Torque_Map_MtxHandle = osMutexNew(&Torque_Map_Mtx_attributes);
+
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
   /* USER CODE END RTOS_MUTEX */
@@ -261,6 +302,12 @@ int main(void)
   /* creation of CAN1_Q */
   CAN1_QHandle = osMessageQueueNew (16, sizeof(CANMsg), &CAN1_Q_attributes);
 
+  /* creation of CAN2_Q */
+  CAN2_QHandle = osMessageQueueNew (16, sizeof(CANMsg), &CAN2_Q_attributes);
+
+  /* creation of CANRX_Q */
+  CANRX_QHandle = osMessageQueueNew (32, sizeof(CANMsg), &CANRX_Q_attributes);
+
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
@@ -280,6 +327,9 @@ int main(void)
 
   /* creation of ControlTask */
   ControlTaskHandle = osThreadNew(startControlTask, NULL, &ControlTask_attributes);
+
+  /* creation of CAN2TxTask */
+  CAN2TxTaskHandle = osThreadNew(startCAN2TxTask, NULL, &CAN2TxTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -599,6 +649,24 @@ static void MX_CAN2_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN CAN2_Init 2 */
+
+  // Set up and configure CAN2 filter
+  CAN_FilterTypeDef canfilterconfig;
+  canfilterconfig.FilterActivation = CAN_FILTER_ENABLE;
+  canfilterconfig.FilterBank = 10;  // anything between 0 to SlaveStartFilterBank
+  canfilterconfig.FilterFIFOAssignment = CAN_RX_FIFO0;
+  canfilterconfig.FilterIdHigh = 0x0000;
+  canfilterconfig.FilterIdLow = 0x0000;
+  canfilterconfig.FilterMaskIdHigh = 0x0000;
+  canfilterconfig.FilterMaskIdLow = 0x0000;
+  canfilterconfig.FilterMode = CAN_FILTERMODE_IDMASK;
+  canfilterconfig.FilterScale = CAN_FILTERSCALE_32BIT;
+  canfilterconfig.SlaveStartFilterBank = 0;  // 13 to 27 are assigned to slave CAN (CAN 2) OR 0 to 12 are assgned to CAN1
+  HAL_CAN_ConfigFilter(&hcan2, &canfilterconfig);
+
+  // Activate Notifications and start up CAN interface...
+  HAL_CAN_Start(&hcan2);
+  HAL_CAN_ActivateNotification(&hcan2, CAN_IT_RX_FIFO0_MSG_PENDING);
 
   /* USER CODE END CAN2_Init 2 */
 

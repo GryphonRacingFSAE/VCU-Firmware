@@ -42,7 +42,7 @@ void BSPC() {
 		}
 		osMutexRelease(APPS_Data_MtxHandle);
 	} else {
-		myprintf("Missed osMutexAcquire(APPS_Data_MtxHandle): control.c:BSPC\n");
+		ERROR_PRINT("Missed osMutexAcquire(APPS_Data_MtxHandle): control.c:BSPC\n");
 	}
 }
 
@@ -70,11 +70,11 @@ void RTD() {
 			}
 			osMutexRelease(APPS_Data_MtxHandle);
 		} else {
-			myprintf("Missed osMutexAcquire(APPS_Data_MtxHandle): control.c:RTD\n");
+			ERROR_PRINT("Missed osMutexAcquire(APPS_Data_MtxHandle): control.c:RTD\n");
 		}
 		osMutexRelease(Ctrl_Data_MtxHandle);
 	} else {
-		myprintf("Missed osMutexAcquire(Ctrl_Data_MtxHandle): control.c:RTD\n");
+		ERROR_PRINT("Missed osMutexAcquire(Ctrl_Data_MtxHandle): control.c:RTD\n");
 	}
 	callCounts++;
 }
@@ -88,7 +88,7 @@ void pumpCtrl() {
 		osMutexRelease(Ctrl_Data_MtxHandle);
 	} else {
 		HAL_GPIO_WritePin(GPIO_PUMP_GPIO_Port, GPIO_PUMP_Pin, GPIO_PIN_SET); // Turn on pump if cannot acquire mutex
-		myprintf("Missed osMutexAcquire(Ctrl_Data_MtxHandle): control.c:pumpCtrl\n");
+		ERROR_PRINT("Missed osMutexAcquire(Ctrl_Data_MtxHandle): control.c:pumpCtrl\n");
 	}
 }
 
@@ -105,6 +105,6 @@ void fanCtrl() {
 		// Turn on fans if cannot acquire mutex
 		HAL_GPIO_WritePin(GPIO_RAD_FAN_GPIO_Port, GPIO_RAD_FAN_Pin, GPIO_PIN_SET);
 		HAL_GPIO_WritePin(GPIO_ACC_FAN_GPIO_Port, GPIO_ACC_FAN_Pin, GPIO_PIN_SET);
-		myprintf("Missed osMutexAcquire(Ctrl_Data_MtxHandle): control.c:fanCtrl\n");
+		ERROR_PRINT("Missed osMutexAcquire(Ctrl_Data_MtxHandle): control.c:fanCtrl\n");
 	}
 }

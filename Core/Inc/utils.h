@@ -15,6 +15,30 @@
 #define MIN(a,b) (a<b ? a:b)
 #define ABS(a) ((a)<0 ? ((a)*-1):a)
 
-int myprintf(const char *format, ...);
+int GRCprintf(const char *format, ...);
+
+#define DEBUG_PRINT_LEVEL 4
+
+#if DEBUG_PRINT_LEVEL == 1
+	#define DEBUG_PRINT(...)
+	#define WARNING_PRINT(...)
+	#define ERROR_PRINT(...)
+	#define CRITICAL_PRINT(...) GRCprintf(__VA_ARGS__)
+#elif DEBUG_PRINT_LEVEL == 2
+	#define DEBUG_PRINT(...)
+	#define WARNING_PRINT(...)
+	#define ERROR_PRINT(...) GRCprintf(__VA_ARGS__)
+	#define CRITICAL_PRINT(...) GRCprintf(__VA_ARGS__)
+#elif DEBUG_PRINT_LEVEL == 3
+	#define DEBUG_PRINT(...)
+	#define WARNING_PRINT(...) GRCprintf(__VA_ARGS__)
+	#define ERROR_PRINT(...) GRCprintf(__VA_ARGS__)
+	#define CRITICAL_PRINT(...) GRCprintf(__VA_ARGS__)
+#elif DEBUG_PRINT_LEVEL == 4
+	#define DEBUG_PRINT(...) GRCprintf(__VA_ARGS__)
+	#define WARNING_PRINT(...) GRCprintf(__VA_ARGS__)
+	#define ERROR_PRINT(...) GRCprintf(__VA_ARGS__)
+	#define CRITICAL_PRINT(...) GRCprintf(__VA_ARGS__)
+#endif
 
 #endif /* INC_UTILS_H_ */
