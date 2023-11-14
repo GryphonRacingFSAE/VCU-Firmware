@@ -135,10 +135,14 @@ void startAPPSTask() {
 				CRITICAL_PRINT("Missed osMutexAcquire(APPS_Data_MtxHandle): APPS.c:startAPPSTask\n");
 			}
 		}
-		DEBUG_PRINT("APPS1:%d, APPS2:%d, APPS_POS:%d\r\n", apps1Avg, apps2Avg, appsPos);
+		//Moved above print statement to fix declaration error
+		int32_t averageAppsPos = (appsPos1 + appsPos2) / 2;
+
+		//Assuming appsPos is supposed to be averageAppsPos, changed to fix error
+		DEBUG_PRINT("APPS1:%d, APPS2:%d, APPS_POS:%d\r\n", apps1Avg, apps2Avg, averageAppsPos);
 
 		int32_t appsPos = 0;
-		int32_t averageAppsPos = (appsPos1 + appsPos2) / 2;
+
 		appsPos = MAX(MIN(averageAppsPos, 100),0); // Clamp to between 0-100%
 		if (osMutexAcquire(APPS_Data_MtxHandle, 5) == osOK){
 			APPS_Data.pedalPos = appsPos;

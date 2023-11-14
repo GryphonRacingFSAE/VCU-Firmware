@@ -178,7 +178,8 @@ extern void startCANTxTask(void *argument);
 extern void startAPPSTask(void *argument);
 extern void startCANRxTask(void *argument);
 extern void startControlTask(void *argument);
-extern void startWatchdogTask(void *argument);
+//commented out (watchdog unfinished)
+//extern void startWatchdogTask(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -287,7 +288,8 @@ int main(void)
   ControlTaskHandle = osThreadNew(startControlTask, NULL, &ControlTask_attributes);
 
   /* creation of watchdogTask */
-  watchdogTaskHandle = osThreadNew(startWatchdogTask, NULL, &watchdogTask_attributes);
+  //commented out (watchdog unfinished)
+  //watchdogTaskHandle = osThreadNew(startWatchdogTask, NULL, &watchdogTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -641,6 +643,8 @@ static void MX_DMA_Init(void)
 static void MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
+/* USER CODE BEGIN MX_GPIO_Init_1 */
+/* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOC_CLK_ENABLE();
@@ -708,6 +712,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Alternate = GPIO_AF2_TIM3;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : wheelSpeed_Pin */
+  GPIO_InitStruct.Pin = wheelSpeed_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(wheelSpeed_GPIO_Port, &GPIO_InitStruct);
+
   /*Configure GPIO pins : LD1_Pin LD3_Pin LD2_Pin */
   GPIO_InitStruct.Pin = LD1_Pin|LD3_Pin|LD2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -774,6 +784,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Alternate = GPIO_AF2_TIM4;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
+/* USER CODE BEGIN MX_GPIO_Init_2 */
+/* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */

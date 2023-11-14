@@ -2,8 +2,15 @@
  * watchdog.h
  *
  *  Created on: Apr 10, 2023
- *      Author: Dallas
+ *      Author: Dallas, Riyan
+ *      errors fixed - Riyan
  */
+
+//included for uint32_t error
+#include <stdint.h>
+//included for osMutexId_t error
+#include "cmsis_os.h"
+
 #ifndef INC_WATCHDOG_H_
 #define INC_WATCHDOG_H_
 

@@ -10,6 +10,14 @@
 #include "CAN.h"
 #include "cmsis_os2.h"
 #include "main.h"
+/*
+
+ * ********************************************************************************
+ * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*
+ * !  Commented out to get build compeletion (idk how to fix the errors in this) !*
+ * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*
+ * ********************************************************************************
+
 
 Watchdog_Data_Struct Watchdog_Data = {
 	.flags = BSPC_INVALID | RTD_INVALID // This must contain all errors that can be reset
@@ -28,6 +36,7 @@ void startWatchdogTask() {
 			// Safe as flags is never 0 here
 			uint32_t flag_index = 31 - __builtin_clz(flags);
 
+
 			if ((tick - tick_stamp[flag_index]) > tick_limit[flag_index]) {
 
 			}
@@ -39,3 +48,4 @@ void startWatchdogTask() {
 		osDelayUntil(tick += WATCHDOG_PERIOD);
 	}
 }
+*/

@@ -2,7 +2,7 @@
  * control.c
  *
  *  Created on: Jan 20, 2023
- *      Author: Matt
+ *      Author: Matt, Riyan, Ronak
  *
  */
 
@@ -11,6 +11,11 @@
 #include "watchdog.h"
 #include "utils.h"
 #include "main.h"
+#include <stdio.h>
+
+//variable for pulse count & last time
+volatile uint32_t pulse_count = 0;
+uint32_t last_time = 0;
 
 Ctrl_Data_Struct Ctrl_Data = {
 	.wheelSpeed = {},
@@ -24,15 +29,17 @@ Ctrl_Data_Struct Ctrl_Data = {
 void startControlTask() {
 	uint32_t tick = osKernelGetTickCount();
 	while (1) {
-		BSPC();
-		RTD();
+		//commented out until watchdog is finished, does not work without watchdog
+		//BSPC();
+		//RTD();
 		pumpCtrl();
 		fanCtrl();
 		LEDCtrl();
 		osDelayUntil(tick += CTRL_PERIOD);
 	}
 }
-
+//commented out until watchdog is finished
+/*
 // Brake system plausibility check
 void BSPC() {
 	if (osMutexAcquire(APPS_Data_MtxHandle, 5) == osOK){
@@ -53,7 +60,10 @@ void BSPC() {
 		ERROR_PRINT("Missed osMutexAcquire(APPS_Data_MtxHandle): control.c:BSPC\n");
 	}
 }
+*/
 
+//commented out until watchdog is finished
+/*
 // Ready to drive
 // Rules: EV.10.4.3 & EV.10.5
 void RTD() {
@@ -85,6 +95,64 @@ void RTD() {
 		ERROR_PRINT("Missed osMutexAcquire(Ctrl_Data_MtxHandle): control.c:RTD\n");
 	}
 	callCounts++;
+}
+*/
+
+//function for incrementing pulse count, as efficient as possible
+void EXTI0_IRQHandler(void) {
+    /* USER CODE BEGIN EXTI0_IRQn 0 */
+    pulse_count++; // Increment pulse count on each rising edge
+    /* USER CODE END EXTI0_IRQn 0 */
+    HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_0);
+}
+
+
+/*
+ * Wheel Speed Sensor (Test Build)
+ * Function counts number of pulse changes (high to low) over a period of time
+ * Each pulse represents the change from the wood to nothing
+ * calculates speed after 20 pulses are counted (still experimenting with this)
+ * (pulses/time)* circumference of wheel = speed m/s
+ * Calculate into m/s then convert to km/h (multiply speed with 3.6)
+ * Currently printing speed value to console (need to ensuure reasonable numbers) moving to CAN output soon
+ *
+ * LED turns on everytime  is high, turns off everytime sensor is low (temporary to ensure sensor and board communicating good)
+ */
+
+void WSsensor() {
+	//temporary circumference value, need to get wheel circumference
+	int circumference = 0.5;
+
+	//if 20 pulses have been counted, run speed calculate
+	if (pulse_count >= 20) {
+		//get current time
+		uint32_t current_time = HAL_GetTick();
+		//calculate time difference, gives time during pulse count
+		uint32_t time_diff = current_time - last_time;
+
+		//calculate speed in m/s
+		int speed = (int) pulse_count / (int) time_diff * circumference;
+		//convert speed to km/h
+		speed = speed * 3.6;
+		//print speed
+		printf("Speed: %d pulses per second\n", speed);
+
+		//reset pulse count and time values
+		pulse_count = 0;
+		last_time = current_time;
+	}
+
+	// Read the state of the pin connected to the sensor
+	GPIO_PinState SensorState = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_7);
+
+	//if pin state is high turn led on, else turn led off
+	if (SensorState == GPIO_PIN_SET) {
+		//turn LED on
+		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
+	} else {
+		//turn :ED off if not already off
+		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+	}
 }
 
 // Motor & Motor controller cooling pump control
