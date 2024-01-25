@@ -25,7 +25,7 @@
 #define RTD_TRACTIVE_VOLTAGE_ON 4500
 
 typedef struct {
-	uint32_t wheelSpeed[4];
+	uint32_t wheelSpeed[4];		 //each index stores speed of each wheel
 	int32_t motorControllerTemp; // 10:1 conversion
 	int32_t accumulatorMaxTemp; // 10:1 conversion?
 	int32_t coolantTemp; // 10:1 conversion
@@ -39,6 +39,7 @@ extern osMutexId_t Ctrl_Data_MtxHandle;
 void startControlTask();
 
 void BSPC(); // Brake system plausibility check
+void wSsensor(); // Wheel speed sensor
 void RTD(); // Ready to drive
 void pumpCtrl(); // Motor & Motor controller cooling pump control
 void fanCtrl(); // Accumulator cooling fan control

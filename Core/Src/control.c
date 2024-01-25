@@ -32,9 +32,9 @@ void startControlTask() {
 		//commented out until watchdog is finished, does not work without watchdog
 		//BSPC();
 		//RTD();
+		wSsensor();
 		pumpCtrl();
 		fanCtrl();
-		LEDCtrl();
 		osDelayUntil(tick += CTRL_PERIOD);
 	}
 }
@@ -98,60 +98,56 @@ void RTD() {
 }
 */
 
-//function for incrementing pulse count, as efficient as possible
-void EXTI0_IRQHandler(void) {
-    /* USER CODE BEGIN EXTI0_IRQn 0 */
-    pulse_count++; // Increment pulse count on each rising edge
-    /* USER CODE END EXTI0_IRQn 0 */
-    HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_0);
-}
 
 
 /*
- * Wheel Speed Sensor (Test Build)
- * Function counts number of pulse changes (high to low) over a period of time
- * Each pulse represents the change from the wood to nothing
- * calculates speed after 20 pulses are counted (still experimenting with this)
- * (pulses/time)* circumference of wheel = speed m/s
- * Calculate into m/s then convert to km/h (multiply speed with 3.6)
- * Currently printing speed value to console (need to ensuure reasonable numbers) moving to CAN output soon
- *
- * LED turns on everytime  is high, turns off everytime sensor is low (temporary to ensure sensor and board communicating good)
- */
+ * calculates number of ticks registered within a second
+ * divide number of ticks by the number of teeth on wheelspeed reader to get rpm
+ * Calculate speed in KPH: 0.1885 * wheel RPM * diameter of tire
+*/
 
-void WSsensor() {
-	//temporary circumference value, need to get wheel circumference
-	int circumference = 0.5;
+void wSsensor() {
+	uint32_t rpm = 0;
 
-	//if 20 pulses have been counted, run speed calculate
-	if (pulse_count >= 20) {
-		//get current time
-		uint32_t current_time = HAL_GetTick();
-		//calculate time difference, gives time during pulse count
-		uint32_t time_diff = current_time - last_time;
+	//number of teeth on wheel speed reader
+	uint16_t teeth = 15;
 
-		//calculate speed in m/s
-		int speed = (int) pulse_count / (int) time_diff * circumference;
-		//convert speed to km/h
-		speed = speed * 3.6;
-		//print speed
-		printf("Speed: %d pulses per second\n", speed);
+	//temporary diameter value, need to get tyre diameter
+	float diameter = 0.5;
 
-		//reset pulse count and time values
-		pulse_count = 0;
+	//increment pulse count when changes seen
+	pulse_count = TIM2->CNT;
+
+	//current time variable, uses internal clock to get current time
+	uint32_t current_time = HAL_GetTick();
+
+	//calculate time difference, will be used for running calculation every second
+	uint32_t time_diff = current_time - last_time;
+
+	//if time difference is one second, run calculation to find rpm
+	if(time_diff == 1){
+		//calculate wheel rpm
+		uint32_t rps = pulse_count / teeth;
+
+		//convert rps to rpm, add to rpm value
+		uint32_t conversion = rps * 60;
+
+		//add converted value to rpm values that are already being stored
+		rpm += conversion;
+
+		printf("RPM = %ld", rpm);
+
+		//flash lights based on number of ticks counted (for testing purposes)
+		for(int i = 0; i < pulse_count; i++){
+			HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
+			HAL_Delay(250);
+			HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+			HAL_Delay(250);
+		}
+
+		//reset rps value for next iteration and update last time value with current time
+		rps = 0;
 		last_time = current_time;
-	}
-
-	// Read the state of the pin connected to the sensor
-	GPIO_PinState SensorState = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_7);
-
-	//if pin state is high turn led on, else turn led off
-	if (SensorState == GPIO_PIN_SET) {
-		//turn LED on
-		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
-	} else {
-		//turn :ED off if not already off
-		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
 	}
 }
 
@@ -185,10 +181,4 @@ void fanCtrl() {
 	}
 }
 
-void LEDCtrl() {
-	// LD1 = Green
-	// LD2 = Blue
-	// LD3 = Red
 
-
-}

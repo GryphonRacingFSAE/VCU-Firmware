@@ -85,8 +85,6 @@ void Error_Handler(void);
 #define ADC1_APPS1_GPIO_Port GPIOA
 #define ADC3_AUX2_Pin GPIO_PIN_3
 #define ADC3_AUX2_GPIO_Port GPIOA
-#define wheelSpeed_Pin GPIO_PIN_7
-#define wheelSpeed_GPIO_Port GPIOA
 #define LD1_Pin GPIO_PIN_0
 #define LD1_GPIO_Port GPIOB
 #define GPIO_D1_Pin GPIO_PIN_7
