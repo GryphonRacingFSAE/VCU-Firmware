@@ -25,7 +25,7 @@
 #define RTD_TRACTIVE_VOLTAGE_ON 4500
 
 typedef struct {
-	uint32_t wheelSpeed[4];		 //each index stores speed of each wheel
+	float wheelSpeed[4];		 //each index stores speed of each wheel
 	int32_t motorControllerTemp; // 10:1 conversion
 	int32_t accumulatorMaxTemp; // 10:1 conversion?
 	int32_t coolantTemp; // 10:1 conversion

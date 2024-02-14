@@ -17,6 +17,9 @@
 volatile uint32_t pulse_count = 0;
 uint32_t last_time = 0;
 
+//four most recent time values
+int recentFour[3] = 0;
+
 Ctrl_Data_Struct Ctrl_Data = {
 	.wheelSpeed = {},
 	.motorControllerTemp = 0,
@@ -101,55 +104,65 @@ void RTD() {
 
 
 /*
- * calculates number of ticks registered within a second
- * divide number of ticks by the number of teeth on wheelspeed reader to get rpm
- * Calculate speed in KPH: 0.1885 * wheel RPM * diameter of tire
+ * Start built in timer immediately
+ * Store time value for every pulse read
+ * store 4 most recent values in array
+ * take time average of 4 values and convert value to rps
+ * convert rps to rpm to kph, store speed value in .wheelSpeed array
 */
 
 void wSsensor() {
+	//rpm variable
 	uint32_t rpm = 0;
+
+	//counts the number of times/pulse counts to prevent array overflow
+	uint16_t timeStored = 0;
 
 	//number of teeth on wheel speed reader
 	uint16_t teeth = 15;
 
-	//temporary diameter value, need to get tyre diameter
-	float diameter = 0.5;
+	//holds sum value for array population
+	float sum = 0;
 
-	//increment pulse count when changes seen
+	//temporary radius value (in metres) , need to get radius
+	float radius = 0.5;
+
+	//start clock however its supposed to be start idfk anymore
+
+	//increment pulse count when changes seen or however the new timing thing works idk anymore man
 	pulse_count = TIM2->CNT;
 
-	//current time variable, uses internal clock to get current time
-	uint32_t current_time = HAL_GetTick();
+	//increment time stored after pulse has been detected
+	timeStored ++;
 
-	//calculate time difference, will be used for running calculation every second
-	uint32_t time_diff = current_time - last_time;
+	//get time value however the new timing configuration calls for it temporarily using hal get tick will have to divide by cpu clock speed with new version (currently 216Mhz) to get time in seconds
+	uint32_t stored_time = HAL_GetTick()/216;
 
-	//if time difference is one second, run calculation to find rpm
-	if(time_diff == 1){
-		//calculate wheel rpm
-		uint32_t rps = pulse_count / teeth;
-
-		//convert rps to rpm, add to rpm value
-		uint32_t conversion = rps * 60;
-
-		//add converted value to rpm values that are already being stored
-		rpm += conversion;
-
-		printf("RPM = %ld", rpm);
-
-		//flash lights based on number of ticks counted (for testing purposes)
-		for(int i = 0; i < pulse_count; i++){
-			HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
-			HAL_Delay(250);
-			HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
-			HAL_Delay(250);
+	//check to see if array is full
+	if(timeStored == 4){
+		//take the sum of all recent time values to calculate average time for 4 ticks
+		for(int i = 0; i < sizeof(recentFour); i++){
+			sum += recentfour[i];
 		}
+		//clear array so it can be repopulated
+		memset(recentFour, 0, sizeof(recentFour));
 
-		//reset rps value for next iteration and update last time value with current time
-		rps = 0;
-		last_time = current_time;
+		//get time average
+		float timeAvg = sum/4;
+
+		//store time in wheelspeed array
+		Ctrl_Data.wheelSpeed[0] = timeAvg;
+
+		//array is currently in seconds/rotation, need to be converted to rotations/seconds, multiply by 60 to get rpm
+		rpm = (1/Ctrl_Data.wheelSpeed[0]) * 60;
+
+
+	} else{
+		//stored time value in the array
+		recentFour[timeStored - 1] = stored_time;
 	}
-}
+
+	}
 
 // Motor & Motor controller cooling pump control
 void pumpCtrl() {

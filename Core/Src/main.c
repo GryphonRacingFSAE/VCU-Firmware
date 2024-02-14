@@ -146,6 +146,7 @@ const osMutexAttr_t Torque_Map_Mtx_attributes = {
   .cb_size = sizeof(Torque_Map_MtxControlBlock),
 };
 /* Definitions for Watchdog_Data_Mtx */
+/*
 osMutexId_t Watchdog_Data_MtxHandle;
 osStaticMutexDef_t Watchdog_Data_MtxControlBlock;
 const osMutexAttr_t Watchdog_Data_Mtx_attributes = {
@@ -153,6 +154,7 @@ const osMutexAttr_t Watchdog_Data_Mtx_attributes = {
   .cb_mem = &Watchdog_Data_MtxControlBlock,
   .cb_size = sizeof(Watchdog_Data_MtxControlBlock),
 };
+*/
 /* Definitions for printSem */
 osSemaphoreId_t printSemHandle;
 osStaticSemaphoreDef_t printSemControlBlock;
@@ -176,13 +178,12 @@ static void MX_USART3_UART_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_RTC_Init(void);
 static void MX_TIM2_Init(void);
-static void MX_TIM3_Init(void);
 void StartDefaultTask(void *argument);
 extern void startCANTxTask(void *argument);
 extern void startAPPSTask(void *argument);
 extern void startCANRxTask(void *argument);
 extern void startControlTask(void *argument);
-extern void startWatchdogTask(void *argument);
+//extern void startWatchdogTask(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -215,6 +216,9 @@ int main(void)
   /* Configure the system clock */
   SystemClock_Config();
 
+  /* Configure cycle counter */
+  Cycle_Counter_Config();
+
   /* USER CODE BEGIN SysInit */
 
   /* USER CODE END SysInit */
@@ -229,7 +233,6 @@ int main(void)
   MX_ADC1_Init();
   MX_RTC_Init();
   MX_TIM2_Init();
-  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
@@ -247,7 +250,7 @@ int main(void)
   Torque_Map_MtxHandle = osMutexNew(&Torque_Map_Mtx_attributes);
 
   /* creation of Watchdog_Data_Mtx */
-  Watchdog_Data_MtxHandle = osMutexNew(&Watchdog_Data_Mtx_attributes);
+  //Watchdog_Data_MtxHandle = osMutexNew(&Watchdog_Data_Mtx_attributes);
 
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
@@ -293,7 +296,7 @@ int main(void)
   ControlTaskHandle = osThreadNew(startControlTask, NULL, &ControlTask_attributes);
 
   /* creation of watchdogTask */
-  watchdogTaskHandle = osThreadNew(startWatchdogTask, NULL, &watchdogTask_attributes);
+  //watchdogTaskHandle = osThreadNew(startWatchdogTask, NULL, &watchdogTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -318,6 +321,16 @@ int main(void)
   /* USER CODE END 3 */
 }
 
+/*
+ * @brief cycle counter configuration (onboard timer for wheel speed)
+ * @retval none
+ */
+void Cycle_Counter_Config(void){
+	CoreDebug -> DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+	DWT -> CYCCNT = 0;
+	DWT -> CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+}
+
 /**
   * @brief System Clock Configuration
   * @retval None
@@ -335,7 +348,7 @@ void SystemClock_Config(void)
   /** Configure the main internal regulator output voltage
   */
   __HAL_RCC_PWR_CLK_ENABLE();
-  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE3);
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
@@ -345,10 +358,10 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.LSEState = RCC_LSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLM = 4;
-  RCC_OscInitStruct.PLL.PLLN = 96;
+  RCC_OscInitStruct.PLL.PLLM = 13;
+  RCC_OscInitStruct.PLL.PLLN = 216;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-  RCC_OscInitStruct.PLL.PLLQ = 4;
+  RCC_OscInitStruct.PLL.PLLQ = 9;
   RCC_OscInitStruct.PLL.PLLR = 2;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
@@ -368,13 +381,17 @@ void SystemClock_Config(void)
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_7) != HAL_OK)
   {
     Error_Handler();
   }
+
+  /** Enables the Clock Security System
+  */
+  HAL_RCC_EnableCSS();
 }
 
 /**
@@ -610,27 +627,6 @@ static void MX_TIM2_Init(void)
   /* USER CODE BEGIN TIM2_Init 2 */
 
   /* USER CODE END TIM2_Init 2 */
-
-}
-
-/**
-  * @brief TIM3 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_TIM3_Init(void)
-{
-
-  /* USER CODE BEGIN TIM3_Init 0 */
-
-  /* USER CODE END TIM3_Init 0 */
-
-  /* USER CODE BEGIN TIM3_Init 1 */
-
-  /* USER CODE END TIM3_Init 1 */
-  /* USER CODE BEGIN TIM3_Init 2 */
-
-  /* USER CODE END TIM3_Init 2 */
 
 }
 
