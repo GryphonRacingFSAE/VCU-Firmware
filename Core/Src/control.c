@@ -12,13 +12,14 @@
 #include "utils.h"
 #include "main.h"
 #include <stdio.h>
+#include <string.h>
 
 //variable for pulse count & last time
 volatile uint32_t pulse_count = 0;
 uint32_t last_time = 0;
 
 //four most recent time values
-int recentFour[3] = 0;
+int recentFour[3] = {0,0,0};
 
 Ctrl_Data_Struct Ctrl_Data = {
 	.wheelSpeed = {},
@@ -142,7 +143,7 @@ void wSsensor() {
 	if(timeStored == 4){
 		//take the sum of all recent time values to calculate average time for 4 ticks
 		for(int i = 0; i < sizeof(recentFour); i++){
-			sum += recentfour[i];
+			sum += recentFour[i];
 		}
 		//clear array so it can be repopulated
 		memset(recentFour, 0, sizeof(recentFour));
