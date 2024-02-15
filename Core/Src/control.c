@@ -33,12 +33,12 @@ Ctrl_Data_Struct Ctrl_Data = {
 void startControlTask() {
 	uint32_t tick = osKernelGetTickCount();
 	while (1) {
-		//commented out until watchdog is finished, does not work without watchdog
-		//BSPC();
-		//RTD();
-		wSsensor();
-		pumpCtrl();
-		fanCtrl();
+//		//commented out until watchdog is finished, does not work without watchdog
+//		//BSPC();
+//		//RTD();
+//		wSsensor();
+//		pumpCtrl();
+//		fanCtrl();
 		osDelayUntil(tick += CTRL_PERIOD);
 	}
 }
@@ -136,6 +136,12 @@ void wSsensor() {
 	//increment time stored after pulse has been detected
 	timeStored ++;
 
+	if(pulse_count % 2 == 0){
+		HAL_GPIO_TogglePin(GPIOB,GPIO_PIN_0);
+	} else{
+		HAL_GPIO_TogglePin(GPIOB,GPIO_PIN_0);
+	}
+
 	//get time value however the new timing configuration calls for it temporarily using hal get tick will have to divide by cpu clock speed with new version (currently 216Mhz) to get time in seconds
 	uint32_t stored_time = HAL_GetTick()/216;
 
@@ -156,6 +162,8 @@ void wSsensor() {
 
 		//array is currently in seconds/rotation, need to be converted to rotations/seconds, multiply by 60 to get rpm
 		rpm = (1/Ctrl_Data.wheelSpeed[0]) * 60;
+
+		//figure out conversion to kph
 
 
 	} else{

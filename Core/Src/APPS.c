@@ -67,133 +67,135 @@ volatile uint16_t ADC1_buff[ADC1_BUFF_LEN] = {};
 // TODO: T.4.3.3
 void startAPPSTask() {
 	// Circular buffer of previous results of each apps signal
-	uint8_t circBuffPos = 0;
-	uint32_t apps1PrevMesurments[AVG_WINDOW] = {};
-	uint32_t apps2PrevMesurments[AVG_WINDOW] = {};
-
-
+//	uint8_t circBuffPos = 0;
+//	uint32_t apps1PrevMesurments[AVG_WINDOW] = {};
+//	uint32_t apps2PrevMesurments[AVG_WINDOW] = {};
+//
+//
 	uint32_t tick = osKernelGetTickCount();
-
+//
 	while (1) {
-		// Averages all samples in entire DMA buffer
-		uint32_t DMAAvg[ADC1_CHANNELS] = {};
-		for (int i = 0; i < ADC1_BUFF_LEN;) {
-			for (int32_t chan = 0; chan < ADC1_CHANNELS; chan++) {
-				DMAAvg[chan] += ADC1_buff[i++];
-			}
-		}
-		for (int32_t chan = 0; chan < ADC1_CHANNELS; chan++) {
-			DMAAvg[chan] /= ADC1_CHANNEL_BUFF_LEN;
-		}
+		GRCprintf("Launched!\n");
 
-		uint32_t apps1AvgDMA = DMAAvg[0];
-		uint32_t apps2AvgDMA = DMAAvg[1];
-
-		//Calculates moving average of previous measurements
-		if(++circBuffPos == AVG_WINDOW){
-			circBuffPos = 0;
-		}
-
-		//Circular for moving average
-		apps1PrevMesurments[circBuffPos] = apps1AvgDMA;
-		apps2PrevMesurments[circBuffPos] = apps2AvgDMA;
-
-		uint32_t apps1Avg = 0;
-		uint32_t apps2Avg = 0;
-		for (int i = 0; i < AVG_WINDOW; i++) {
-			apps1Avg += apps1PrevMesurments[i];
-			apps2Avg += apps2PrevMesurments[i];
-		}
-
-		//Moving average of raw analog value
-		apps1Avg = apps1Avg/AVG_WINDOW;
-		apps2Avg = apps2Avg/AVG_WINDOW;
-
-		// RULE (2023 V2): T.4.2.10 Sensor out of defined range
-		if (apps1Avg < APPS1_MIN || apps1Avg > APPS1_MAX || apps2Avg < APPS2_MIN || apps2Avg > APPS2_MAX) {
-			if (osMutexAcquire(APPS_Data_MtxHandle, 5) == osOK){
-				// The rules don't state a way for the sensors to recover from this error
-				APPS_Data.flags |= APPS_SENSOR_OUT_OF_RANGE_INVALID;
-				osMutexRelease(APPS_Data_MtxHandle);
-			} else {
-				// FIXME: We better catch these mutex misses
-				CRITICAL_PRINT("Missed osMutexAcquire(APPS_Data_MtxHandle): APPS.c:startAPPSTask\n");
-			}
-		}
-
-		int32_t appsPos1 = (apps1Avg - APPS1_MIN) * 100 /(APPS1_MAX - APPS1_MIN);
-		int32_t appsPos2 = (apps2Avg - APPS2_MIN) * 100 /(APPS2_MAX - APPS2_MIN);
-
-		// RULE (2023 V2): T.4.2.4 (Both APPS sensor positions must be within 10% of pedal travel of each other)
-		if (ABS(appsPos1 - appsPos2) <= 10) {
-			if (osMutexAcquire(APPS_Data_MtxHandle, 5) == osOK){
-				// The rules don't state a way for the sensors to recover from this error
-				APPS_Data.flags |= APPS_SENSOR_CONFLICT_INVALID;
-				osMutexRelease(APPS_Data_MtxHandle);
-			} else {
-				// FIXME: We better catch these mutex misses
-				CRITICAL_PRINT("Missed osMutexAcquire(APPS_Data_MtxHandle): APPS.c:startAPPSTask\n");
-			}
-		}
-		//Moved above print statement to fix declaration error
-		int32_t averageAppsPos = (appsPos1 + appsPos2) / 2;
-
-		//Assuming appsPos is supposed to be averageAppsPos, changed to fix error
-		DEBUG_PRINT("APPS1:%d, APPS2:%d, APPS_POS:%d\r\n", apps1Avg, apps2Avg, averageAppsPos);
-
-		int32_t appsPos = 0;
-
-		appsPos = MAX(MIN(averageAppsPos, 100),0); // Clamp to between 0-100%
-		if (osMutexAcquire(APPS_Data_MtxHandle, 5) == osOK){
-			APPS_Data.pedalPos = appsPos;
-			osMutexRelease(APPS_Data_MtxHandle);
-		} else {
-			// FIXME: We better catch these mutex misses
-			CRITICAL_PRINT("Missed osMutexAcquire(APPS_Data_MtxHandle): APPS.c:startAPPSTask\n");
-		}
-
-		//Used for BSPC
-		// TODO: RULE (2023 V2): EV.4.1.3 No regen < 5km/h
-
-		int32_t pedalPercent = MIN(appsPos, 99); // NOTE: Cap values at slightly less then our max % for easier math
-		int32_t rpm = 0;
-
-		if(osMutexAcquire(Ctrl_Data_MtxHandle, osWaitForever) == osOK) {
-			rpm = MIN(Ctrl_Data.motorSpeed, 6499); // NOTE: Cap values at slightly less then our max rpm for easier math
-			osMutexRelease(Ctrl_Data_MtxHandle);
-		} else {
-			CRITICAL_PRINT("Missed osMutexAcquire(Ctrl_Data_MtxHandle): APPS.c:startAPPSTask\n");
-		}
-
-
-		// Integer division - rounds down (use this to our advantage)
-		int32_t pedalOffset = pedalPercent % 10;
-		int32_t pedalLowIndex = pedalPercent / 10;
-		int32_t pedalHighIndex = pedalLowIndex + 1;
-		int32_t rpmOffset = rpm % 500;
-		int32_t rpmLowIndex = rpm / 500;
-		int32_t rpmHighIndex = rpmLowIndex + 1;
-		if (osMutexAcquire(Torque_Map_MtxHandle, osWaitForever) == osOK) {
-			// Grab data points early then release mutex immediately.
-			// NOTE: because we capped our values, both lower indexes will never read the maximum index
-			// this always leaves one column left for the high index.
-			int16_t torque_pedallow_rpmlow = Torque_Map_Data.activeMap[pedalLowIndex][rpmLowIndex];
-			int16_t torque_pedallow_rpmhigh = Torque_Map_Data.activeMap[pedalLowIndex][rpmHighIndex];
-			int16_t torque_pedalhigh_rpmlow = Torque_Map_Data.activeMap[pedalHighIndex][rpmLowIndex];
-			int16_t torque_pedalhigh_rpmhigh = Torque_Map_Data.activeMap[pedalHighIndex][rpmHighIndex];
-
-			osMutexRelease(Torque_Map_MtxHandle);
-
-			// Interpolating across rpm values
-			int16_t torque_pedallow = interpolate(500, torque_pedallow_rpmhigh - torque_pedallow_rpmlow, torque_pedallow_rpmlow, rpmOffset);
-			int16_t torque_pedalhigh = interpolate(500, torque_pedalhigh_rpmhigh - torque_pedalhigh_rpmlow, torque_pedalhigh_rpmlow, rpmOffset);
-			int16_t requestedTorque = interpolate(10, torque_pedalhigh - torque_pedallow, torque_pedallow, pedalOffset);
-
-			requestTorque(requestedTorque); // Transmitting scales by 10 due to Limits of motor controller
-		} else {
-			CRITICAL_PRINT("Missed osMutexAcquire(Torque_Map_MtxHandle): APPS.c:startAPPSTask\n");
-		}
-
+//		// Averages all samples in entire DMA buffer
+//		uint32_t DMAAvg[ADC1_CHANNELS] = {};
+//		for (int i = 0; i < ADC1_BUFF_LEN;) {
+//			for (int32_t chan = 0; chan < ADC1_CHANNELS; chan++) {
+//				DMAAvg[chan] += ADC1_buff[i++];
+//			}
+//		}
+//		for (int32_t chan = 0; chan < ADC1_CHANNELS; chan++) {
+//			DMAAvg[chan] /= ADC1_CHANNEL_BUFF_LEN;
+//		}
+//
+//		uint32_t apps1AvgDMA = DMAAvg[0];
+//		uint32_t apps2AvgDMA = DMAAvg[1];
+//
+//		//Calculates moving average of previous measurements
+//		if(++circBuffPos == AVG_WINDOW){
+//			circBuffPos = 0;
+//		}
+//
+//		//Circular for moving average
+//		apps1PrevMesurments[circBuffPos] = apps1AvgDMA;
+//		apps2PrevMesurments[circBuffPos] = apps2AvgDMA;
+//
+//		uint32_t apps1Avg = 0;
+//		uint32_t apps2Avg = 0;
+//		for (int i = 0; i < AVG_WINDOW; i++) {
+//			apps1Avg += apps1PrevMesurments[i];
+//			apps2Avg += apps2PrevMesurments[i];
+//		}
+//
+//		//Moving average of raw analog value
+//		apps1Avg = apps1Avg/AVG_WINDOW;
+//		apps2Avg = apps2Avg/AVG_WINDOW;
+//
+//		// RULE (2023 V2): T.4.2.10 Sensor out of defined range
+//		if (apps1Avg < APPS1_MIN || apps1Avg > APPS1_MAX || apps2Avg < APPS2_MIN || apps2Avg > APPS2_MAX) {
+//			if (osMutexAcquire(APPS_Data_MtxHandle, 5) == osOK){
+//				// The rules don't state a way for the sensors to recover from this error
+//				APPS_Data.flags |= APPS_SENSOR_OUT_OF_RANGE_INVALID;
+//				osMutexRelease(APPS_Data_MtxHandle);
+//			} else {
+//				// FIXME: We better catch these mutex misses
+//				CRITICAL_PRINT("Missed osMutexAcquire(APPS_Data_MtxHandle): APPS.c:startAPPSTask\n");
+//			}
+//		}
+//
+//		int32_t appsPos1 = (apps1Avg - APPS1_MIN) * 100 /(APPS1_MAX - APPS1_MIN);
+//		int32_t appsPos2 = (apps2Avg - APPS2_MIN) * 100 /(APPS2_MAX - APPS2_MIN);
+//
+//		// RULE (2023 V2): T.4.2.4 (Both APPS sensor positions must be within 10% of pedal travel of each other)
+//		if (ABS(appsPos1 - appsPos2) <= 10) {
+//			if (osMutexAcquire(APPS_Data_MtxHandle, 5) == osOK){
+//				// The rules don't state a way for the sensors to recover from this error
+//				APPS_Data.flags |= APPS_SENSOR_CONFLICT_INVALID;
+//				osMutexRelease(APPS_Data_MtxHandle);
+//			} else {
+//				// FIXME: We better catch these mutex misses
+//				CRITICAL_PRINT("Missed osMutexAcquire(APPS_Data_MtxHandle): APPS.c:startAPPSTask\n");
+//			}
+//		}
+//		//Moved above print statement to fix declaration error
+//		int32_t averageAppsPos = (appsPos1 + appsPos2) / 2;
+//
+//		//Assuming appsPos is supposed to be averageAppsPos, changed to fix error
+//		DEBUG_PRINT("APPS1:%d, APPS2:%d, APPS_POS:%d\r\n", apps1Avg, apps2Avg, averageAppsPos);
+//
+//		int32_t appsPos = 0;
+//
+//		appsPos = MAX(MIN(averageAppsPos, 100),0); // Clamp to between 0-100%
+//		if (osMutexAcquire(APPS_Data_MtxHandle, 5) == osOK){
+//			APPS_Data.pedalPos = appsPos;
+//			osMutexRelease(APPS_Data_MtxHandle);
+//		} else {
+//			// FIXME: We better catch these mutex misses
+//			CRITICAL_PRINT("Missed osMutexAcquire(APPS_Data_MtxHandle): APPS.c:startAPPSTask\n");
+//		}
+//
+//		//Used for BSPC
+//		// TODO: RULE (2023 V2): EV.4.1.3 No regen < 5km/h
+//
+//		int32_t pedalPercent = MIN(appsPos, 99); // NOTE: Cap values at slightly less then our max % for easier math
+//		int32_t rpm = 0;
+//
+//		if(osMutexAcquire(Ctrl_Data_MtxHandle, osWaitForever) == osOK) {
+//			rpm = MIN(Ctrl_Data.motorSpeed, 6499); // NOTE: Cap values at slightly less then our max rpm for easier math
+//			osMutexRelease(Ctrl_Data_MtxHandle);
+//		} else {
+//			CRITICAL_PRINT("Missed osMutexAcquire(Ctrl_Data_MtxHandle): APPS.c:startAPPSTask\n");
+//		}
+//
+//
+//		// Integer division - rounds down (use this to our advantage)
+//		int32_t pedalOffset = pedalPercent % 10;
+//		int32_t pedalLowIndex = pedalPercent / 10;
+//		int32_t pedalHighIndex = pedalLowIndex + 1;
+//		int32_t rpmOffset = rpm % 500;
+//		int32_t rpmLowIndex = rpm / 500;
+//		int32_t rpmHighIndex = rpmLowIndex + 1;
+//		if (osMutexAcquire(Torque_Map_MtxHandle, osWaitForever) == osOK) {
+//			// Grab data points early then release mutex immediately.
+//			// NOTE: because we capped our values, both lower indexes will never read the maximum index
+//			// this always leaves one column left for the high index.
+//			int16_t torque_pedallow_rpmlow = Torque_Map_Data.activeMap[pedalLowIndex][rpmLowIndex];
+//			int16_t torque_pedallow_rpmhigh = Torque_Map_Data.activeMap[pedalLowIndex][rpmHighIndex];
+//			int16_t torque_pedalhigh_rpmlow = Torque_Map_Data.activeMap[pedalHighIndex][rpmLowIndex];
+//			int16_t torque_pedalhigh_rpmhigh = Torque_Map_Data.activeMap[pedalHighIndex][rpmHighIndex];
+//
+//			osMutexRelease(Torque_Map_MtxHandle);
+//
+//			// Interpolating across rpm values
+//			int16_t torque_pedallow = interpolate(500, torque_pedallow_rpmhigh - torque_pedallow_rpmlow, torque_pedallow_rpmlow, rpmOffset);
+//			int16_t torque_pedalhigh = interpolate(500, torque_pedalhigh_rpmhigh - torque_pedalhigh_rpmlow, torque_pedalhigh_rpmlow, rpmOffset);
+//			int16_t requestedTorque = interpolate(10, torque_pedalhigh - torque_pedallow, torque_pedallow, pedalOffset);
+//
+//			requestTorque(requestedTorque); // Transmitting scales by 10 due to Limits of motor controller
+//		} else {
+//			CRITICAL_PRINT("Missed osMutexAcquire(Torque_Map_MtxHandle): APPS.c:startAPPSTask\n");
+//		}
+//
 		osDelayUntil(tick += APPS_PERIOD);
 	}
 }
