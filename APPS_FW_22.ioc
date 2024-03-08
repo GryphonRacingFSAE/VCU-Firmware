@@ -429,7 +429,7 @@ ProjectManager.ProjectBuild=false
 ProjectManager.ProjectFileName=APPS_FW_22.ioc
 ProjectManager.ProjectName=APPS_FW_22
 ProjectManager.ProjectStructure=
-ProjectManager.RegisterCallBack=
+ProjectManager.RegisterCallBack=TIM
 ProjectManager.StackSize=0x400
 ProjectManager.TargetToolchain=STM32CubeIDE
 ProjectManager.ToolChainLocation=
@@ -547,15 +547,42 @@ SH.ADCx_IN3.ConfNb=1
 SH.GPXTI13.0=GPIO_EXTI13
 SH.GPXTI13.ConfNb=1
 SH.S_TIM2_CH1_ETR.0=TIM2_CH1,Input_Capture1_from_TI1
+<<<<<<< Updated upstream
 SH.S_TIM2_CH1_ETR.ConfNb=1
 SH.S_TIM3_CH1.0=TIM3_CH1
 SH.S_TIM3_CH1.1=TIM3_CH1
 SH.S_TIM3_CH1.ConfNb=2
 SH.S_TIM4_CH1.0=TIM4_CH1
+=======
+SH.S_TIM2_CH1_ETR.1=TIM2_CH1
+SH.S_TIM2_CH1_ETR.ConfNb=2
+SH.S_TIM3_CH1.0=TIM3_CH1,Input_Capture1_from_TI1
+SH.S_TIM3_CH1.ConfNb=1
+SH.S_TIM3_CH2.0=TIM3_CH2,Input_Capture2_from_TI2
+SH.S_TIM3_CH2.ConfNb=1
+SH.S_TIM4_CH1.0=TIM4_CH1,Input_Capture1_from_TI1
+>>>>>>> Stashed changes
 SH.S_TIM4_CH1.ConfNb=1
 TIM2.Channel-Input_Capture1_from_TI1=TIM_CHANNEL_1
 TIM2.IPParameters=Channel-Input_Capture1_from_TI1,Period
 TIM2.Period=14184397
+<<<<<<< Updated upstream
+=======
+TIM3.Channel-Input_Capture1_from_TI1=TIM_CHANNEL_1
+TIM3.Channel-Input_Capture2_from_TI2=TIM_CHANNEL_2
+TIM3.ClockDivision=TIM_CLOCKDIVISION_DIV1
+TIM3.ICPrescaler-Input_Capture1_from_TI1=TIM_ICPSC_DIV1
+TIM3.ICPrescaler-Input_Capture2_from_TI2=TIM_ICPSC_DIV1
+TIM3.IPParameters=Channel-Input_Capture1_from_TI1,Channel-Input_Capture2_from_TI2,Prescaler,ClockDivision,Period,ICPrescaler-Input_Capture1_from_TI1,ICPrescaler-Input_Capture2_from_TI2
+TIM3.Period=55407
+TIM3.Prescaler=256
+TIM4.Channel-Input_Capture1_from_TI1=TIM_CHANNEL_1
+TIM4.ClockDivision=TIM_CLOCKDIVISION_DIV1
+TIM4.ICPrescaler-Input_Capture1_from_TI1=TIM_ICPSC_DIV1
+TIM4.IPParameters=Channel-Input_Capture1_from_TI1,Prescaler,Period,ClockDivision,ICPrescaler-Input_Capture1_from_TI1
+TIM4.Period=55407
+TIM4.Prescaler=256
+>>>>>>> Stashed changes
 USART3.IPParameters=VirtualMode-Asynchronous
 USART3.VirtualMode-Asynchronous=VM_ASYNC
 VP_FREERTOS_VS_CMSIS_V2.Mode=CMSIS_V2

@@ -38,6 +38,12 @@ extern osMutexId_t Ctrl_Data_MtxHandle;
 
 void startControlTask();
 
+<<<<<<< Updated upstream
+=======
+void OverflowCheck(TIM_HandleTypeDef * htim);
+void TimerToFrequency(TIM_HandleTypeDef* htim);
+void RPMConversion(); //frequency to RPM conversion for wheel speed sensors
+>>>>>>> Stashed changes
 void BSPC(); // Brake system plausibility check
 void RTD(); // Ready to drive
 void pumpCtrl(); // Motor & Motor controller cooling pump control
