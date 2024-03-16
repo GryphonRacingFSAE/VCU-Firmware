@@ -17,7 +17,7 @@
 
 int GRCprintf(const char *format, ...);
 
-#define DEBUG_PRINT_LEVEL 4
+#define DEBUG_PRINT_LEVEL 5
 
 #if DEBUG_PRINT_LEVEL == 1
 	#define TRACE_PRINT(...)

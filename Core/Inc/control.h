@@ -10,6 +10,12 @@
 
 #include "main.h"
 #include "cmsis_os.h"
+#include "utils.h"
+#include <string.h>
+
+
+#define NUM_WHEELS 4
+#define NUM_TEETH 32
 
 // Turn on Pump if motor controller > 40c
 #define PUMP_MOTOR_CONTROLLER_TEMP_THRESHOLD 400
@@ -25,12 +31,13 @@
 #define RTD_TRACTIVE_VOLTAGE_ON 4500
 
 typedef struct {
-	uint32_t wheelSpeed[4];
 	int32_t motorControllerTemp; // 10:1 conversion
 	int32_t accumulatorMaxTemp; // 10:1 conversion?
 	int32_t coolantTemp; // 10:1 conversion
 	int32_t tractiveVoltage; // 10:1 conversion
 	int32_t motorSpeed; // 1:1
+	volatile uint32_t wheel_rpm[NUM_WHEELS];
+	volatile uint32_t wheel_freq[NUM_WHEELS];
 } Ctrl_Data_Struct;
 
 extern Ctrl_Data_Struct Ctrl_Data;
@@ -38,8 +45,7 @@ extern osMutexId_t Ctrl_Data_MtxHandle;
 
 void startControlTask();
 
-void OverflowCheck(TIM_HandleTypeDef * htim);
-void RPMConversion(); //frequency to RPM conversion for wheel speed sensors
+void manageWheelSpeedTimerOverflow(const TIM_HandleTypeDef * htim);
 void BSPC(); // Brake system plausibility check
 void RTD(); // Ready to drive
 void pumpCtrl(); // Motor & Motor controller cooling pump control
