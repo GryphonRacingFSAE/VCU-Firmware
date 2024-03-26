@@ -25,6 +25,7 @@
 #include "APPS.h"
 #include "CAN.h"
 #include "utils.h"
+#include "control.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -182,7 +183,6 @@ extern void startAPPSTask(void *argument);
 extern void startCANRxTask(void *argument);
 extern void startControlTask(void *argument);
 extern void startWatchdogTask(void *argument);
-
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -215,7 +215,7 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-
+  HAL_Init();
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
@@ -229,8 +229,12 @@ int main(void)
   MX_USART3_UART_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
+  I2C_HandleTypeDef hi2c1;
+  hi2c1.Instance = I2C1;
+  vicorInit(&hi2c1);
 
-
+  configureVICORDevice(&hi2c1);
+  performVICOROperations(&hi2c1);
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -254,7 +258,7 @@ int main(void)
 
   /* Create the semaphores(s) */
   /* creation of printSem */
-  printSemHandle = osSemaphoreNew(1, 1, &printSem_attributes);
+  printSemHandle = osSemaphoreNew(1, 0, &printSem_attributes);
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
@@ -862,6 +866,28 @@ void StartDefaultTask(void *argument)
   }
   /* USER CODE END 5 */
 }
+
+/**
+  * @brief  Period elapsed callback in non blocking mode
+  * @note   This function is called  when TIM1 interrupt took place, inside
+  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
+  * a global variable "uwTick" used as application time base.
+  * @param  htim : TIM handle
+  * @retval None
+  */
+/*void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{*/
+  /* USER CODE BEGIN Callback 0 */
+
+  /* USER CODE END Callback 0 */
+ /* if (htim->Instance == TIM1) {
+    HAL_IncTick();
+  }
+}*/
+  /* USER CODE BEGIN Callback 1 */
+
+  /* USER CODE END Callback 1 */
+
 
 /**
   * @brief  This function is executed in case of error occurrence.
